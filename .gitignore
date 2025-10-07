@@ -1,0 +1,48 @@
+# Misc
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IDEs
+*.iml
+*.ipr
+*.iws
+.idea/
+.vscode/
+
+# Flutter/Dart
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+
+# Android outputs
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Firebase / secrets
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+.env
+
+# Keystore files
+android/key.properties
+android/app/*.jks
+
+# Symbol & obfuscation
+app.*.symbols
+app.*.map.json
