@@ -1,53 +1,85 @@
-name: Build and Release Flutter APK
+name: Flutter Release CI/CD
 
 on:
   push:
     branches:
       - main
-      - master
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build Flutter APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name:  Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Flutter
+      - name:  Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0' # <-- đổi nếu bạn dùng version khác
+          flutter-version: '3.24.0'
+          channel: stable
 
-      - name: Install dependencies
+      - name:  Clean project
+        run: flutter clean
+
+      - name:  Get dependencies
         run: flutter pub get
 
-      - name: Build release APK
+      - name:  Read version from pubspec.yaml
+        id: version
+        run: |
+          version_line=$(grep '^version:' pubspec.yaml)
+          version=$(echo $version_line | cut -d ' ' -f2 | cut -d '+' -f1)
+          build=$(echo $version_line | cut -d '+' -f2)
+          new_build=$((build + 1))
+          new_version_line="version: $version+$new_build"
+          echo " New version: $new_version_line"
+          # Cập nhật file pubspec.yaml
+          sed -i "s/^version: .*/$new_version_line/" pubspec.yaml
+          # Xuất biến môi trường cho bước tiếp theo
+          echo "version=$version" >> $GITHUB_ENV
+          echo "build=$new_build" >> $GITHUB_ENV
+          echo "tag=v${version}+${new_build}" >> $GITHUB_ENV
+
+      - name:  Build release APK
         run: flutter build apk --release
 
-      - name: Upload APK as artifact
+      - name:  Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-apk
+          name: coffee_app-release
           path: build/app/outputs/flutter-apk/app-release.apk
 
+      - name:  Commit updated versionCode
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add pubspec.yaml
+          git commit -m " Auto bump version to ${{ env.version }}+${{ env.build }}"
+          git push origin HEAD:main
+
   release:
-    name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
-
     steps:
-      - name: Download built artifact
+      - name: 📥 Download built artifact
         uses: actions/download-artifact@v4
         with:
-          name: release-apk
-          path: .
+          name: coffee_app-release
+          path: build/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: app-release.apk
+          tag_name: ${{ env.tag }}
+          name: "Release ${{ env.tag }}"
+          files: build/app-release.apk
+          body: |
+            Auto-generated release
+            Version: `${{ env.version }}`
+            Build: `${{ env.build }}`
+            ---
+             APK attached below 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
